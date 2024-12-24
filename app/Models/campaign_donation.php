@@ -10,9 +10,10 @@ class campaign_donation extends Model
     use HasFactory;
 
 
+    protected $table = 'campaigns_donations'; // تأكد من اسم الجدول الصحيح
     protected $guarded = [];
 
 
 
-   
+
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\DonationController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,8 +11,10 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ZakatNisabController;
 use App\Http\Controllers\ImageController;
-Route::get('/images', [ImageController::class, 'index'])->name('images.index');
+use Illuminate\Support\Facades\Artisan;
 
+Route::get('/images', [ImageController::class, 'index'])->name('images.index');
+Route::patch('/donations/{id}/update-status', [DonationController::class, 'updateStatus'])->name('donations.updateStatus');
 // حذف صورة
 Route::delete('/images/{id}', [ImageController::class, 'delete'])->name('image.delete');
 

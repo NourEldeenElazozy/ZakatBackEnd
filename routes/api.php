@@ -4,6 +4,7 @@ use App\Http\Controllers\API\CampaignController;
 use App\Http\Controllers\API\NisabController;
 use App\Http\Controllers\API\CategoryController;
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\DonationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ImageController;
@@ -18,7 +19,7 @@ use App\Http\Controllers\ImageController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-
+Route::post('/donate', [DonationController::class, 'store']);
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
@@ -33,3 +34,4 @@ Route::get('open_campaign', [CampaignController::class, 'open_campaign']);
 
 Route::post('login', [AuthController::class, 'login']);
 Route::middleware('auth:api')->post('logout', [AuthController::class, 'logout']);
+
