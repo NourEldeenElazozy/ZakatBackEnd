@@ -25,6 +25,7 @@ class User extends Authenticatable
         'email',
         'password',
         'phone',
+        'device_token', // أضف هذا السطر
     ];
 
     /**
@@ -35,6 +36,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+            'device_token', // يمكنك إخفاءه من JSON responses إذا لم تكن بحاجة إليه في الواجهة الأمامية
     ];
 
     /**

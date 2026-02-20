@@ -27,6 +27,10 @@ class campaign extends Model
     {
         return $this->belongsToMany(donation::class,'campaigns_donations');
     }
-
+    
+    public function donations()
+    {
+        return $this->belongsToMany(donation::class, 'campaigns_donations', 'campaign_id', 'donation_id');
+    }
 
 }

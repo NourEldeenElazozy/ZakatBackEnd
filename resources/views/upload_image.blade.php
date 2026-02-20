@@ -116,7 +116,7 @@
                 @foreach($images as $image)
                     <div class="col-md-4 mb-4">
                         <div class="card shadow-sm">
-                            <img src="{{ asset('storage/' . $image->image_path) }}" class="card-img-top" alt="صورة">
+                            <img src="{{ asset('zakat/storage/' . $image->image_path) }}" class="card-img-top" alt="صورة">
                             <div class="card-body">
                                 <p class="card-text">{{ $image->description }}</p>
                                 <form action="{{ route('image.delete', $image->id) }}" method="POST">

@@ -21,38 +21,76 @@ class CampaignController extends Controller
 {
 
 
-    public function index(Request $request)
-    {
+   
 
-        $campaign = campaign::latest()->orderby('created_at', 'desc')->get();
-        $categorie = categorie::latest()->get();
+public function index()
+{
+    $categorie = categorie::latest()->get();
+    
+    // جلب الحملات مع التبرعات
+    $campaigns = Campaign::with('donations')->latest()->get();
 
-
-
-        return view('campaign', compact('campaign', 'categorie'));
+    foreach ($campaigns as $c) {
+        // التعديل هنا: نستخدم where لفلترة التبرعات المكتملة فقط قبل الجمع
+        // بافتراض أن رقم 1 يعني "مكتمل"
+        $c->total_paid = $c->donations->where('status', 1)->sum('amount'); 
+        
+        // حساب المتبقي بناءً على المدفوع المكتمل فقط
+        $c->remaining  = $c->total - $c->total_paid; 
+        
+        // (اختياري) لضمان عدم ظهور قيم سالبة إذا تجاوز التبرع المبلغ المطلوب
+        if($c->remaining < 0) {
+            $c->remaining = 0;
+        }
     }
 
-
+    return view('campaign', compact('campaigns', 'categorie'));
+}
     public function create()
     {
         //
     }
 
-    public function index2($id)
-    {
+   public function index2($id)
+{
+    // 1. جلب قائمة التبرعات
+    $donations = DB::table('donations')
+        ->join('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
+        ->join('campaigns', 'campaigns_donations.campaign_id', '=', 'campaigns.id')
+        ->join('users_donations', 'donations.id', '=', 'users_donations.donation_id')
+        ->join('users', 'users_donations.user_id', '=', 'users.id')
+        ->where('campaigns.id', $id)
+        ->select('donations.*', 'users.name as username', 'campaigns.name as campaign_name', 'users.phone as phone')
+        ->orderBy('donations.created_at', 'desc')
+        ->get();
 
+    // 2. حساب إجمالي النقدية "المكتملة" (Status = 1)
+    $total_cash_completed = DB::table('donations')
+        ->join('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
+        ->where('campaigns_donations.campaign_id', $id)
+        ->where('donations.type', 'نقدي')
+        ->where('donations.status', 1) // شرط الاكتتمال
+        ->sum('donations.amount');
 
-        $donations = DB::table('donations')
-            ->join('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
-            ->join('campaigns', 'campaigns_donations.campaign_id', '=', 'campaigns.id')
-            ->join('users_donations', 'donations.id', '=', 'users_donations.donation_id')
-            ->join('users', 'users_donations.user_id', '=', 'users.id')
-            ->where('campaigns.id', $id)
-            ->select('donations.*', 'users.name as username', 'campaigns.name as campaign_name')
-            ->get();
+    // 3. حساب إجمالي النقدية "غير المكتملة" (Status = 0)
+    $total_cash_pending = DB::table('donations')
+        ->join('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
+        ->where('campaigns_donations.campaign_id', $id)
+        ->where('donations.type', 'نقدي')
+        ->where('donations.status', 0) // شرط عدم الاكتتمال
+        ->sum('donations.amount');
 
-        return view('donations', compact('donations'));
-    }
+    // 4. حساب إجمالي باقي القيم (المدفوعات غير النقدية - إلكتروني/شيك/إلخ)
+    $total_other_donations = DB::table('donations')
+        ->join('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
+        ->where('campaigns_donations.campaign_id', $id)
+        ->where('donations.type', '!=', 'نقدي')
+        ->sum('donations.amount');
+
+    // 5. إرسال البيانات إلى العرض
+    return view('donations', compact('donations', 'total_cash_completed', 'total_cash_pending', 'total_other_donations'));
+}
+
 
 
     public function store(StoreCampaignRequest $request)

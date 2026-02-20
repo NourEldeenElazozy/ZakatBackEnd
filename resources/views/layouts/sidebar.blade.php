@@ -214,7 +214,7 @@
 								</div>
 								<div class="list-group-item d-flex  align-items-center">
 									<div class="ml-3">
-										<span class="avatar avatar-lg brround cover-image" data-image-src="{{URL::asset('assets/img/faces/6.jpg')}}"><span class="avatar-status bg-success"></span></span>
+										<span class="avatar avatar-lg brround cover-image" data-image-src="{{URL::asset('zakat/assets/img/faces/6.jpg')}}"><span class="avatar-status bg-success"></span></span>
 									</div>
 									<div>
 										<strong>Olivia</strong> New Schedule Realease......

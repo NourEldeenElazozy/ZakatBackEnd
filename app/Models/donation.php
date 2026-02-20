@@ -12,17 +12,16 @@ class donation extends Model
     protected $guarded = [];
 
 
-    public function campaign()
-    {
-        return $this->belongsToMany(campaign::class,'campaigns_donations');
-    }
+    public function users()
+{
+    return $this->belongsToMany(User::class, 'users_donations', 'donation_id', 'user_id');
+}
 
-       
-    public function user()
-    {
-        return $this->belongsToMany(User::class,'users_donations');
-    }
-
+public function campaigns()
+{
+    return $this->belongsToMany(Campaign::class, 'campaigns_donations', 'donation_id', 'campaign_id');
+}
+    
     
 
 }

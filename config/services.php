@@ -21,6 +21,10 @@ return [
         'scheme' => 'https',
     ],
 
+'firebase' => [
+    'credentials' => base_path(env('FIREBASE_CREDENTIALS')),
+],
+
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
@@ -30,5 +34,8 @@ return [
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
-
+'mobicash' => [
+    'api_key' => env('MOBICASH_API_KEY'),
+    'base_url' => env('MOBICASH_BASE_URL'),
+],
 ];

@@ -87,40 +87,50 @@
 							<div class="card-body">
 								<div class="table-responsive">
 									<table class="table text-md-nowrap" id="example1">
-										<thead>
-                                            <tr>
-                                                <th >ت</th>
-                                                <th>المبلغ النصاب</th>
-                                                <th>آخر تاريخ تحديث</th>
+								<thead>
+    <tr>
+        <th>ت</th>
+        <th>المبلغ النصاب</th>
+        <th>نصاب 24</th>
+        <th>نصاب 21</th>
+        <th>نصاب 18</th>
+        <th>سعر 24</th>
+        <th>سعر 21</th>
+        <th>سعر 18</th>
+        <th class="text-danger">كفارة اليمين</th>
+        <th class="text-warning">فدية الصيام</th>
+        
+        <th>آخر تاريخ تحديث</th>
+        <th>العمليات</th>
+    </tr>
+</thead>
 
-                                            </tr>
-                						</thead>
-										<tbody>
-                                            
-											<tr>
-                                                <?php $i =0?>
-                                                @foreach($nisabs as $nisab)
-                                                <?php $i++?>
-                                           
-                                                <td>{{ $i }}</td>
-                                        <td>{{ $nisab->nisab_amount }}</td>
-                                        <td>{{ $nisab->last_updated }}</td>
-                                            <td>
-                                             
-                                                  
-                                              
-                                              
-                                                    <a class="modal-effect btn btn-sm btn-danger" data-effect="effect-scale"
-                                                        data-id="{{ $nisab->id }}" data-name_category="{{ $nisab->nisab_amount }}"
-                                                        data-toggle="modal" href="#modaldemo9" title="حذف"><i
-                                                            class="las la-trash"></i></a>
-                                              
-                                            </td>
-                                        </tr>
-                                        @endforeach
+<tbody>
+    <?php $i =0?>
+    @foreach($nisabs as $nisab)
+    <?php $i++?>
+    <tr>
+        <td>{{ $i }}</td>
+        <td>{{ $nisab->nisab_amount }}</td>
+        <td>{{ $nisab->nisab_24 }}</td>
+        <td>{{ $nisab->nisab_21 }}</td>
+        <td>{{ $nisab->nisab_18 }}</td>
+        <td>{{ $nisab->price_24 }}</td>
+        <td>{{ $nisab->price_21 }}</td>
+        <td>{{ $nisab->price_18 }}</td>
         
-        
-										</tbody>
+        <td class="font-weight-bold text-danger">{{ $nisab->kaffarat_yameen }}</td>
+        <td class="font-weight-bold text-warning">{{ $nisab->fidyah_siyam }}</td>
+
+        <td>{{ $nisab->last_updated }}</td>
+        <td>
+             <a class="modal-effect btn btn-sm btn-danger" data-effect="effect-scale"
+                data-id="{{ $nisab->id }}" data-name_category="{{ $nisab->nisab_amount }}"
+                data-toggle="modal" href="#modaldemo9" title="حذف"><i class="las la-trash"></i></a>
+        </td>
+    </tr>
+    @endforeach
+</tbody>
                                     </table>
                                     </div>
 
@@ -135,19 +145,69 @@
                                                         type="button"><span aria-hidden="true">&times;</span></button>
                                                 </div>
                                                 <div class="modal-body">
-                                                    <form action="{{route('zakat_nisab.store')}}" method="post" autocomplete="off">
-                                                        {{ csrf_field() }}
-                                
-                                                        <div class="form-group">
-                                                            <label for="exampleInputEmail1">قيمة النصاب لتاريخ اليوم </label>
-                                                            <input type="text" class="form-control" id="nisab_amount" name="nisab_amount">
-                                                        </div>
-                                
-                                                        <div class="modal-footer">
-                                                            <button type="submit" class="btn btn-primary">تاكيد</button>
-                                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">اغلاق</button>
-                                                        </div>
-                                                    </form>
+                                  <form action="{{route('zakat_nisab.store')}}" method="post" autocomplete="off">
+    {{ csrf_field() }}
+
+    <div class="form-group">
+        <label>قيمة النصاب لتاريخ اليوم</label>
+        <input type="text" class="form-control" name="nisab_amount" value="{{ $latest->nisab_amount ?? '' }}">
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <label>نصاب عيار 24</label>
+            <input type="number" step="0.01" name="nisab_24" class="form-control" value="{{ $latest->nisab_24 ?? '' }}">
+        </div>
+        <div class="col-md-4">
+            <label>نصاب عيار 21</label>
+            <input type="number" step="0.01" name="nisab_21" class="form-control" value="{{ $latest->nisab_21 ?? '' }}">
+        </div>
+        <div class="col-md-4">
+            <label>نصاب عيار 18</label>
+            <input type="number" step="0.01" name="nisab_18" class="form-control" value="{{ $latest->nisab_18 ?? '' }}">
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="row">
+        <div class="col-md-4">
+            <label>سعر عيار 24</label>
+            <input type="number" step="0.01" name="price_24" class="form-control" value="{{ $latest->price_24 ?? '' }}">
+        </div>
+        <div class="col-md-4">
+            <label>سعر عيار 21</label>
+            <input type="number" step="0.01" name="price_21" class="form-control" value="{{ $latest->price_21 ?? '' }}">
+        </div>
+        <div class="col-md-4">
+            <label>سعر عيار 18</label>
+            <input type="number" step="0.01" name="price_18" class="form-control" value="{{ $latest->price_18 ?? '' }}">
+        </div>
+    </div>
+
+    <hr>
+
+    <h6 class="text-primary font-weight-bold">القيم الشرعية الأخرى</h6>
+    <div class="row">
+        <div class="col-md-6">
+            <label class="text-danger">كفارة اليمين (دينار)</label>
+            <input type="number" step="0.01" name="kaffarat_yameen" class="form-control" 
+                   placeholder="مثال: 150" value="{{ $latest->kaffarat_yameen ?? '' }}">
+        </div>
+
+        <div class="col-md-6">
+            <label class="text-warning">فدية الصيام (لليوم الواحد)</label>
+            <input type="number" step="0.01" name="fidyah_siyam" class="form-control" 
+                   placeholder="مثال: 10" value="{{ $latest->fidyah_siyam ?? '' }}">
+        </div>
+    </div>
+    <div class="modal-footer mt-3">
+        <button type="submit" class="btn btn-primary">تاكيد</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">اغلاق</button>
+    </div>
+
+</form>
+
                                                 </div>
                                             </div>
                                         </div>

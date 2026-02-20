@@ -13,7 +13,7 @@
 	<body class="main-body bg-primary-transparent">
 		<!-- Loader -->
 		<div id="global-loader">
-			<img src="{{URL::asset('assets/img/loader.svg')}}" class="loader-img" alt="Loader">
+			<img src="{{URL::asset('zakat/assets/img/loader.svg')}}" class="loader-img" alt="Loader">
 		</div>
 		<!-- /Loader -->
 		@yield('content')		

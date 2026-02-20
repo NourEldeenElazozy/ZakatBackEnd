@@ -5,12 +5,12 @@
 
 @section('css')
 <!-- Internal Data table css -->
-<link href="{{URL::asset('assets/plugins/datatable/css/dataTables.bootstrap4.min.css')}}" rel="stylesheet" />
-<link href="{{URL::asset('assets/plugins/datatable/css/buttons.bootstrap4.min.css')}}" rel="stylesheet">
-<link href="{{URL::asset('assets/plugins/datatable/css/responsive.bootstrap4.min.css')}}" rel="stylesheet" />
-<link href="{{URL::asset('assets/plugins/datatable/css/jquery.dataTables.min.css')}}" rel="stylesheet">
-<link href="{{URL::asset('assets/plugins/datatable/css/responsive.dataTables.min.css')}}" rel="stylesheet">
-<link href="{{URL::asset('assets/plugins/select2/css/select2.min.css')}}" rel="stylesheet">
+<link href="{{URL::asset('zakat/assets/plugins/datatable/css/dataTables.bootstrap4.min.css')}}" rel="stylesheet" />
+<link href="{{URL::asset('zakat/assets/plugins/datatable/css/buttons.bootstrap4.min.css')}}" rel="stylesheet">
+<link href="{{URL::asset('zakat/assets/plugins/datatable/css/responsive.bootstrap4.min.css')}}" rel="stylesheet" />
+<link href="{{URL::asset('zakat/assets/plugins/datatable/css/jquery.dataTables.min.css')}}" rel="stylesheet">
+<link href="{{URL::asset('zakat/assets/plugins/datatable/css/responsive.dataTables.min.css')}}" rel="stylesheet">
+<link href="{{URL::asset('zakat/assets/plugins/select2/css/select2.min.css')}}" rel="stylesheet">
 @endsection
 @section('page-header')
 				<!-- breadcrumb -->
@@ -76,66 +76,91 @@
 							<div class="card-body">
 								<div class="table-responsive">
 									<table class="table text-md-nowrap" id="example1">
-										<thead>
-                                            <tr>
-                                                <th >ت</th>
-                                                <th >الصورة</th>
+    <thead>
+        <tr>
+            <th>ت</th>
+            <th>الصورة</th>
+            <th>عنوان الحملة</th>
+            <th>الوصف</th>
+            <th>التصنيف</th>
+            <th>القيمة الكلية</th>
+            <th>المدفوع</th>
+            <th>المتبقي</th>
+            <th>نوع المستفيد</th>
+            <th>حالة الحملة</th>
+            <th>العمليات</th>
+        </tr>
+    </thead>
 
-                                                <th >عنوان الحمله  </th>
-                                                <th >الوصف</th>
-                                                <th >التصنيف</th>
-                                                <th >القيمة</th>
-                                                <th >المدفوع</th>
-                                                <th >نوع المستفيد</th>
-                                                <th >حالة الحملة </th>
-                                               <th >العمليات</th>
+    <tbody>
+        <?php $i = 0; ?>
+        @foreach($campaigns as $x)
+        <?php $i++; ?>
 
+        <tr>
+            <td>{{ $i }}</td>
 
-                                            </tr>
-                						</thead>
-										<tbody>
-                                            <tr>
-                                                <?php $i =0?>
-                                                @foreach($campaign as $x)
-                                                <?php $i++?>
-                                           
-                                                <td>{{$i}}</td>
-                                                <td>
-                                                    <img class="img-sm rounded-circle bg-warning d-flex align-items-center justify-content-center text-white" src="public/img/{{$x->image}}" >
-                                                    </td>
-                                                <td>{{$x->name}}</td>
-                                                <td>{{$x->description}}</td>
-                                                <td>{{$x->categorie->name_category}}</td>
-                                               
-                                                <td>{{$x->total}}</td>
-                                                <td>{{$x->paid_up}}</td>
-                                                <td>{{$x->recipient}}</td>
-                                                <td>{{$x->state_campaign}}</td>
+            <td>
+                <img class="img-sm rounded-circle bg-warning d-flex align-items-center justify-content-center text-white"
+                     src="public/img/{{ $x->image }}">
+            </td>
 
-                                            <td>
-                                               
-                                                <a type="button" class="btn btn-sm btn-info" href=" {{ url('donations') }}/{{ $x->id }} " ><i class=" las la-phone-volume"></i></a>
-                                                
-                                                    <a class="modal-effect btn btn-sm btn-info" data-effect="effect-scale"
-                                                        data-id="{{ $x->id }}" data-name="{{ $x->name }}" data-description="{{ $x->description }}"
-                                                         data-name_category="{{$x->categorie->name_category}}" data-image="{{ $x->image }}"  data-total="{{ $x->total }}"
-                                                         data-paid_up="{{ $x->paid_up }}" data-recipient="{{ $x->recipient }}" data-state_campaign="{{ $x->state_campaign }}"
-                                                        data-toggle="modal"
-                                                        href="#exampleModal2" title="تعديل"><i class="las la-pen"></i></a>
-                                              
-                                              
-                                                    <a class="modal-effect btn btn-sm btn-danger" data-effect="effect-scale"
-                                                        data-id="{{ $x->id }}" data-name="{{ $x->name }}"
-                                                        data-toggle="modal" href="#modaldemo9" title="حذف"><i
-                                                            class="las la-trash"></i></a>
-                                              
-                                            </td>
-                                        </tr>
-                                        @endforeach
-        
-        
-										</tbody>
-                                    </table>
+            <td>{{ $x->name }}</td>
+            <td>{{ $x->description }}</td>
+            <td>{{ $x->categorie->name_category }}</td>
+
+            <td>{{ number_format($x->total, 0) }}</td>
+
+            {{-- المدفوع المحسوب --}}
+            <td class="text-success fw-bold">
+                {{ number_format($x->total_paid, 0) }}
+            </td>
+
+            {{-- المتبقي --}}
+            <td class="text-danger fw-bold">
+                {{ number_format($x->remaining, 0) }}
+            </td>
+
+            <td>{{ $x->recipient }}</td>
+            <td>{{ $x->state_campaign }}</td>
+
+            <td>
+                <a type="button" class="btn btn-sm btn-info"
+                   href="{{ url('donations') }}/{{ $x->id }}">
+                   <i class="las la-phone-volume"></i>
+                </a>
+
+                <a class="modal-effect btn btn-sm btn-info"
+                   data-effect="effect-scale"
+                   data-id="{{ $x->id }}"
+                   data-name="{{ $x->name }}"
+                   data-description="{{ $x->description }}"
+                   data-name_category="{{ $x->categorie->name_category }}"
+                   data-image="{{ $x->image }}"
+                   data-total="{{ $x->total }}"
+                   data-paid_up="{{ $x->total_paid }}"
+                   data-recipient="{{ $x->recipient }}"
+                   data-state_campaign="{{ $x->state_campaign }}"
+                   data-toggle="modal"
+                   href="#exampleModal2" title="تعديل">
+                   <i class="las la-pen"></i>
+                </a>
+
+                <a class="modal-effect btn btn-sm btn-danger"
+                   data-effect="effect-scale"
+                   data-id="{{ $x->id }}"
+                   data-name="{{ $x->name }}"
+                   data-toggle="modal"
+                   href="#modaldemo9" title="حذف">
+                   <i class="las la-trash"></i>
+                </a>
+            </td>
+        </tr>
+
+        @endforeach
+    </tbody>
+</table>
+
 
                                     </div>
                                   
@@ -361,24 +386,24 @@
 @endsection
 @section('js')
 <!-- Internal Data tables -->
-<script src="{{URL::asset('assets/plugins/datatable/js/jquery.dataTables.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/dataTables.dataTables.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/dataTables.responsive.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/responsive.dataTables.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/jquery.dataTables.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/dataTables.bootstrap4.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/dataTables.buttons.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/buttons.bootstrap4.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/jszip.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/pdfmake.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/vfs_fonts.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/buttons.html5.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/buttons.print.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/buttons.colVis.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/dataTables.responsive.min.js')}}"></script>
-<script src="{{URL::asset('assets/plugins/datatable/js/responsive.bootstrap4.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/jquery.dataTables.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/dataTables.dataTables.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/dataTables.responsive.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/responsive.dataTables.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/jquery.dataTables.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/dataTables.bootstrap4.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/dataTables.buttons.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/buttons.bootstrap4.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/jszip.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/pdfmake.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/vfs_fonts.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/buttons.html5.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/buttons.print.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/buttons.colVis.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/dataTables.responsive.min.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/plugins/datatable/js/responsive.bootstrap4.min.js')}}"></script>
 <!--Internal  Datatable js -->
-<script src="{{URL::asset('assets/js/table-data.js')}}"></script>
+<script src="{{URL::asset('zakat/assets/js/table-data.js')}}"></script>
 
 <script>
     $('#exampleModal2').on('show.bs.modal', function(event) {

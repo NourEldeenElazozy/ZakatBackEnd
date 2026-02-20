@@ -12,7 +12,10 @@ class campaign_donation extends Model
 
     protected $table = 'campaigns_donations'; // تأكد من اسم الجدول الصحيح
     protected $guarded = [];
-
+    public function campaign()
+    {
+        return $this->belongsTo(Campaign::class, 'campaign_id');
+    }
 
 
 

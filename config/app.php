@@ -159,6 +159,8 @@ return [
         /*
          * Laravel Framework Service Providers...
          */
+        Artisaninweb\SoapWrapper\ServiceProvider::class,
+
         Illuminate\Auth\AuthServiceProvider::class,
         Illuminate\Broadcasting\BroadcastServiceProvider::class,
         Illuminate\Bus\BusServiceProvider::class,
@@ -210,6 +212,7 @@ return [
 
     'aliases' => Facade::defaultAliases()->merge([
         // 'ExampleClass' => App\Example\ExampleClass::class,
+     'SoapWrapper' => Artisaninweb\SoapWrapper\Facade\SoapWrapper::class,
     ])->toArray(),
 
 ];

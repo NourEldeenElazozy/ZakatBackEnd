@@ -12,6 +12,10 @@ class ZakatNisab extends Model
     protected $fillable = [
         'nisab_amount',
         'last_updated',
+             'nisab_24', 'nisab_21', 'nisab_18',
+        'price_24', 'price_21', 'price_18',
+        'kaffarat_yameen', // جديد
+    'fidyah_siyam'     // جديد
     ];
 
     // إذا كنت تريد تحديد تنسيق التاريخ

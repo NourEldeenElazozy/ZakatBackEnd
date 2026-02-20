@@ -7,7 +7,7 @@
 
 @section('css')
 <!-- Sidemenu-respoansive-tabs css -->
-<link href="{{URL::asset('assets/plugins/sidemenu-responsive-tabs/css/sidemenu-responsive-tabs.css')}}" rel="stylesheet">
+<link href="{{URL::asset('zakat/assets/plugins/sidemenu-responsive-tabs/css/sidemenu-responsive-tabs.css')}}" rel="stylesheet">
 @endsection
 @section('content')
 		<div class="container py-5 h-100">
@@ -16,7 +16,7 @@
 					<div class="card" style="border-radius: 1rem;">
 						<div class="row g-0">
 							<div class="col-md-5 col-lg-5  d-md-block ">
-								<img src="{{URL::asset('assets/img/media/logo-icon-dark.jpg')}} " height="100%"  />
+								<img src="{{URL::asset('zakat/assets/img/media/logo-icon-dark.jpg')}} " height="100%"  />
 							</div>
 							<div class="col-md-6 col-lg-7 d-flex align-items-center">
 								<div class="card-body p-4 p-lg-5 text-black">
