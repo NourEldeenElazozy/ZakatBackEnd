@@ -84,22 +84,35 @@
                     <input type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
                 </div>
 
-               <div class="col-md-3 mb-3">
-    <label class="font-weight-bold">الحملة:</label>
-    <select name="campaign_id" class="form-control select2">
-        <option value="">-- جميع الحملات --</option>
-        
-        <option value="general" {{ request('campaign_id') == 'general' ? 'selected' : '' }}>
-            تبرع عام (غير مرتبط بحملة)
-        </option>
+              <div class="col-md-3 mb-3">
+                    <label class="font-weight-bold">الحملة / وجه التبرع:</label>
+                    <select name="campaign_id" class="form-control select2">
+                        <option value="">-- الكل --</option>
+                        
+                        <option value="general" {{ request('campaign_id') == 'general' ? 'selected' : '' }}>
+                            تبرع عام (كل التبرعات غير المرتبطة بحملة)
+                        </option>
 
-        @foreach($campaigns_list as $cmp)
-            <option value="{{ $cmp->id }}" {{ request('campaign_id') == $cmp->id ? 'selected' : '' }}>
-                {{ $cmp->name }}
-            </option>
-        @endforeach
-    </select>
-</div>
+                        <optgroup label="الحملات المخصصة">
+                            @foreach($campaigns_list as $cmp)
+                                <option value="{{ $cmp->id }}" {{ request('campaign_id') == $cmp->id ? 'selected' : '' }}>
+                                    {{ $cmp->name }}
+                                </option>
+                            @endforeach
+                        </optgroup>
+
+                        @if($purposes_list->count() > 0)
+                        <optgroup label="أوجه التبرع">
+                            @foreach($purposes_list as $purpose)
+                                <option value="purpose_{{ $purpose }}" {{ request('campaign_id') == 'purpose_'.$purpose ? 'selected' : '' }}>
+                                    {{ $purpose }}
+                                </option>
+                            @endforeach
+                        </optgroup>
+                        @endif
+
+                    </select>
+                </div>
                 
                 <div class="col-md-3 mb-3">
                     <label class="font-weight-bold">المتبرع:</label>
@@ -151,7 +164,13 @@
                 
                 <div class="mt-2 text-muted" style="font-size: 14px;">
                     @if(request('campaign_id'))
-                        <span class="badge badge-light border ml-1">حملة: {{ $campaigns_list->where('id', request('campaign_id'))->first()->name ?? '' }}</span>
+                        @if(request('campaign_id') == 'general')
+                            <span class="badge badge-light border ml-1">التصنيف: تبرع عام</span>
+                        @elseif(\Illuminate\Support\Str::startsWith(request('campaign_id'), 'purpose_'))
+                            <span class="badge badge-light border ml-1">وجه التبرع: {{ str_replace('purpose_', '', request('campaign_id')) }}</span>
+                        @else
+                            <span class="badge badge-light border ml-1">حملة: {{ $campaigns_list->where('id', request('campaign_id'))->first()->name ?? '' }}</span>
+                        @endif
                     @endif
                     
                     @if(request('donor_id'))

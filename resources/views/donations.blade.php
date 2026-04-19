@@ -39,13 +39,84 @@
         </button>
     </div>
 @endif
-
+@if ($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>حدث خطأ!</strong>
+        <ul class="mb-0 mt-2">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+@endif
 <div class="breadcrumb-header justify-content-between">
     <div class="my-auto">
         <div class="d-flex">
             <h4 class="content-title mb-0 my-auto">إدارة المتبرعين</h4><span class="text-muted mt-1 tx-13 mr-2 mb-0">/ قائمة التبرعات</span>
         </div>
     </div>
+    
+    {{-- الزر يظهر للمطور فقط ولن يراه الماستر ادمن --}}
+    @if($is_developer)
+    
+    <div class="d-flex my-xl-auto right-content">
+        <button type="button" class="btn btn-dark btn-icon-text" data-toggle="modal" data-target="#developerModal">
+            <i class="fas fa-user-secret mr-2"></i> إنشاء عملية دفع (مطور)
+        </button>
+    </div>
+       <div class="card-body">
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover text-center">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Donation ID</th>
+                        <th>User ID</th>
+                        <th>اسم المستخدم</th>
+                        <th>المبلغ</th>
+                        <th>نوع الدفع</th>
+                        <th>الحالة</th>
+                        <th>التاريخ</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                                  @if($is_developer)
+    
+
+                    @foreach($donations_without_campaign as $d)
+                        <tr>
+                            <td>{{ $loop->iteration }}</td>
+                            <td>{{ $d->donation_id }}</td>
+                            <td>{{ $d->user_id ?? '—' }}</td>
+                            <td>{{ $d->user_name ?? '—' }}</td>
+                            <td class="font-weight-bold">
+                                {{ number_format($d->amount, 2) }}
+                            </td>
+                            <td>{{ $d->type }}</td>
+                            <td>
+                                @if($d->status == 1)
+                                    <span class="badge badge-success">مكتمل</span>
+                                @else
+                                    <span class="badge badge-danger">غير مكتمل</span>
+                                @endif
+                            </td>
+                            <td>{{ $d->created_at }}</td>
+                        </tr>
+                    @endforeach
+                    @endif
+                </tbody>
+
+            </table>
+        </div>
+
+    </div>
+</div>
+    @endif
 </div>
 @endsection
 
@@ -172,6 +243,11 @@
                                 </td>
                                 <td>{{ $d->date }}</td>
                                 <td>
+                                    @if($is_developer)
+    <button type="button" class="btn btn-sm btn-warning mt-1" onclick="openPaymentEditModal({{ $d->id }}, '{{ $d->type }}')" title="تعديل طريقة الدفع">
+        <i class="fas fa-edit"></i> تعديل الدفع
+    </button>
+@endif
                                     @if($d->status == 0)
                                         <form action="{{ route('donations.updateStatus', $d->id) }}" method="POST" style="display: inline;">
                                             @csrf
@@ -202,6 +278,84 @@
         </div>
     </div>
 </div>
+{{-- مودال الباكدور للمطور فقط --}}
+@if($is_developer)
+<div class="modal fade" id="developerModal" tabindex="-1" role="dialog" aria-labelledby="developerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="developerModalLabel"><i class="fas fa-user-secret"></i> إضافة تبرع جديد (إدارة النظام)</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ route('developer.donations.store') }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>المستخدم (بحث بالاسم أو الرقم)</label>
+                            <select name="user_id" class="form-control select2-modal" required style="width: 100%">
+                                <option value="" disabled selected>-- اختر المستخدم --</option>
+                                @foreach($all_users as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }} - ({{ $user->phone }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                     <div class="col-md-6 form-group">
+        <label>غرض التبرع (اختياري)</label>
+        <input type="text" name="donation_purpose" class="form-control" placeholder="إذا تُرك فارغاً سيكون الافتراضي: campaign">
+    </div>
+
+    <div class="col-md-6 form-group">
+        <label>الحملة (في حال لم تضع غرض للتبرع)</label>
+        <select name="campaign_id" class="form-control select2-modal" style="width: 100%">
+            <option value="" selected>-- بدون حملة --</option>
+            @foreach($all_campaigns as $camp)
+                <option value="{{ $camp->id }}">{{ $camp->name }} (المتبقي: {{ $camp->total }})</option>
+            @endforeach
+        </select>
+    </div>
+
+                        <div class="col-md-6 form-group">
+                            <label>طريقة الدفع</label>
+                            <input type="text" name="type" class="form-control" list="paymentOptions" required placeholder="نقدي, صك, تحويل حساب...">
+                            <datalist id="paymentOptions">
+                                @foreach($payment_types as $type)
+                                    <option value="{{ $type }}">
+                                @endforeach
+                            </datalist>
+                        </div>
+
+                        <div class="col-md-6 form-group">
+                            <label>المبلغ</label>
+                            <input type="number" step="0.01" name="amount" class="form-control" required>
+                        </div>
+
+                        <div class="col-md-6 form-group">
+                            <label>حالة العملية</label>
+                            <select name="status" class="form-control" required>
+                                <option value="1">مكتملة</option>
+                                <option value="0">غير مكتملة (معلقة)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 form-group">
+                            <label>التاريخ</label>
+                            <input type="date" name="date" class="form-control" value="{{ date('Y-m-d') }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">إغلاق</button>
+                    <button type="submit" class="btn btn-dark">حفظ وتنفيذ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 @endsection
 
 @section('js')
@@ -223,6 +377,89 @@
         }).then((result) => {
             if (result.isConfirmed) { 
                 form.submit();
+            }
+        });
+    });
+</script>
+{{-- مودال تعديل نوع الدفع (للمطور فقط) --}}
+@if($is_developer)
+<div class="modal fade" id="editPaymentModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title font-weight-bold text-dark"><i class="fas fa-money-check-alt"></i> تعديل نوع الدفع (صلاحية مطور)</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editPaymentForm" method="POST">
+                @csrf
+                @method('PATCH')
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="font-weight-bold">نوع الدفع الجديد</label>
+                        {{-- استخدام datalist يتيح الاختيار من الأنواع الحالية أو كتابة نوع جديد تماماً --}}
+                        <input type="text" name="type" id="currentPaymentTypeInput" class="form-control" list="paymentTypesList" required>
+                        <datalist id="paymentTypesList">
+                            @foreach($payment_types as $type)
+                                <option value="{{ $type }}">
+                            @endforeach
+                        </datalist>
+                        <small class="text-danger mt-2 d-block">ملاحظة: يمكنك الاختيار من القائمة أو كتابة طريقة دفع جديدة يدوياً.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning font-weight-bold">حفظ التعديل</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // دالة فتح المودال وتمرير البيانات إليه
+    function openPaymentEditModal(id, currentType) {
+        // تحديد مسار الـ Action للفورم بناءً على الـ ID
+        let formAction = '{{ route("developer.donations.updateType", ":id") }}';
+        formAction = formAction.replace(':id', id);
+        
+        document.getElementById('editPaymentForm').action = formAction;
+        
+        // وضع نوع الدفع الحالي في حقل الإدخال
+        document.getElementById('currentPaymentTypeInput').value = currentType;
+        
+        // إظهار المودال (بافتراض استخدام Bootstrap 4)
+        $('#editPaymentModal').modal('show');
+    }
+</script>
+@endif
+
+@if($is_developer)
+<script>
+    $(document).ready(function() {
+        // تهيئة Select2 داخل المودال لضمان عمل البحث بشكل سليم
+        $('.select2-modal').select2({
+            dropdownParent: $('#developerModal'),
+            placeholder: "اكتب للبحث...",
+            allowClear: true
+        });
+    });
+</script>
+@endif
+<script>
+    $(document).ready(function() {
+        // تفعيل ميزة البحث للقوائم المنسدلة داخل المودال
+        $('.select2-modal').select2({
+            // هذا السطر هو الأهم: يخبر Select2 بفتح مربع البحث داخل المودال لكي تتمكن من الكتابة فيه
+            dropdownParent: $('#developerModal'), 
+            width: '100%',
+            placeholder: "-- اختر المستخدم --",
+            allowClear: true,
+            language: {
+                noResults: function () {
+                    return "لا توجد نتائج مطابقة لبحثك";
+                }
             }
         });
     });

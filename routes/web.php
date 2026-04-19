@@ -10,6 +10,7 @@ use App\Http\Controllers\DonationsController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ZakatNisabController;
+use App\Http\Controllers\OnlineTransactionController;
 use App\Http\Controllers\ImageController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\NotificationController;
@@ -56,8 +57,11 @@ Route::resource( 'campaign' ,CampaignController::class);
 Route::resource( 'donation' ,DonationsController::class);
 Route::patch('/donations/{id}/mark-as-pending', [DonationsController::class, 'markAsPending'])->name('donations.markAsPending');
 Route::get('donations/{id}',[ CampaignController::class ,'index2']);
-
-
+Route::get('/online-payments', [OnlineTransactionController::class, 'index'])->name('online.index');
+Route::get('/online-payments/export', [OnlineTransactionController::class, 'exportExcel'])->name('online.export');
+// أضف هذا السطر مع باقي مسارات الـ Donations
+Route::post('/donations/developer-store', [App\Http\Controllers\DonationsController::class, 'developerStore'])->name('developer.donations.store');
+Route::patch('/donations/{id}/update-payment-type', [App\Http\Controllers\DonationsController::class, 'updatePaymentType'])->name('developer.donations.updateType');
 Route::prefix('reports')->group(function () {
     Route::get('/summary', [ReportController::class, 'generalSummary'])->name('reports.summary');
     Route::get('/by-category', [ReportController::class, 'donationsByCategory'])->name('reports.categories');

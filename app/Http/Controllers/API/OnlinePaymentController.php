@@ -34,13 +34,31 @@ public function createEzoneLink(Request $request)
         'title' => 'nullable|string',
         'user_id' => 'nullable|integer',
         'campaign_id' => 'nullable|integer',
+        'purpose' => 'nullable|string',
     ]);
 
     $orderRef = $request->input('order_ref');
     $amount = (float)$request->input('amount');
     $userId = $request->input('user_id');
     $campaignId = $request->input('campaign_id');
-
+$purpose = $request->input('purpose');
+$paymentMethodType = $request->input('payment_method', 'yosrpay');
+// 🌟 2. معالجة اسم العميل وتقسيمه ليطابق شروط البوابة
+    $fullName = trim($request->input('customer_name', 'فاعل خير'));
+    $nameParts = explode(' ', $fullName, 2); // فصل الاسم من أول مسافة
+    $firstName = $nameParts[0];
+    // إذا لم يكتب المستخدم اسم أخير، نمرر نقطة أو "غير محدد" لتجنب خطأ الحقول الفارغة
+    $lastName = $nameParts[1] ?? '.'; 
+    
+    $phoneNumber = $request->input('customer_phone', '');
+    $excludedMethods = [];
+    if ($paymentMethodType === 'moamalat') {
+        // إذا اختار معاملات: نستثني الجميع ما عدا 101 (بطاقة مصرفية)
+        $excludedMethods = [125, 107, 106, 105, 104, 102];
+    } else {
+        // إذا اختار يسر باي: نستثني الجميع ما عدا 105 (يسر باي)
+        $excludedMethods = [125, 107, 106, 104, 102, 101];
+    }
     // 2. حفظ العملية مبدئياً
     $transaction = EzonpayYusser::create([
         'order_ref' => $orderRef,
@@ -51,9 +69,9 @@ public function createEzoneLink(Request $request)
     $url = "https://api.ezonepay.ly/payment-link/new";
     $expiresAt = now()->addHour()->format('Y-m-d H:i');
 
-    $redirectUrl = url('/api/ezone/payment-callback?order_ref=' . $orderRef . '&user_id=' . $userId . '&campaign_id=' . $campaignId);
+    $redirectUrl = url('/api/ezone/payment-callback?order_ref=' . $orderRef . '&user_id=' . $userId . '&campaign_id=' . $campaignId . '&purpose=' . urlencode($purpose));
     
-    $payload = [
+   $payload = [
         "Title" => $request->input('title', "تبرع"),
         "OrderReference" => $orderRef,
         "ShopId" => 1025, 
@@ -62,8 +80,13 @@ public function createEzoneLink(Request $request)
         "IsEnabled" => true,
         "ExpiresAt" => $expiresAt, 
         "MaxUsageCount" => 2, 
-        "ExcludedPaymentMethods" => [], 
-        "RedirectUrl" => $redirectUrl 
+     "ExcludedPaymentMethods" => $excludedMethods, // 🌟 تمرير المصفوفة الديناميكية هنا
+        "RedirectUrl" => $redirectUrl ,
+        "customer" => [
+            "firstName" => $firstName,
+            "lastName" => $lastName,
+            "phoneNumber" => $phoneNumber
+        ]
     ];
 
     try {
@@ -361,12 +384,19 @@ public function paymentCallback(Request $request)
                     <p>{$message}</p>
                     <button class="btn" onclick="closeAppWindow()">العودة للتطبيق</button>
                 </div>
-                <script>
-                    function closeAppWindow() {
-                        window.close();
-                        setTimeout(function() { alert("يرجى إغلاق هذه الصفحة والعودة لتطبيق الزكاة."); }, 300);
-                    }
-                </script>
+              <script>
+    function closeAppWindow() {
+        // التحقق مما إذا كانت الصفحة مفتوحة داخل تطبيق فلاتر
+        if (window.FlutterApp) {
+            // إرسال رسالة لفلاتر لإغلاق الشاشة
+            window.FlutterApp.postMessage('closeApp');
+        } else {
+            // إذا كان يفتح من متصفح عادي
+            window.close();
+            setTimeout(function() { alert("يرجى إغلاق هذه الصفحة والعودة لتطبيق الزكاة."); }, 300);
+        }
+    }
+</script>
             </body>
             </html>
 HTML;
@@ -376,7 +406,7 @@ HTML;
         $orderRef = $request->query('order_ref');
         $userId = $request->query('user_id');
         $campaignId = $request->query('campaign_id');
-
+$purpose = $request->query('purpose'); // 🌟 استقبال الغرض
         if (!$orderRef) {
             return response($generateHtml("رقم الطلب مفقود!", "لا يمكن معالجة هذه العملية بسبب نقص في البيانات.", "error"), 400);
         }
@@ -419,14 +449,18 @@ HTML;
                     try {
                         // ✅ 1. تحديث حالة بوابة يسر باي
                         $transaction->update(['status' => 'success', 'updated_at' => now()]);
+                        $finalPurpose = ($campaignId != 0 && $campaignId !== null && $campaignId !== 'null') 
+                                        ? 'campaign' 
+                                        : ($purpose ?? 'اخراج زكاة');
 
                         // ✅ 2. تسجيل التبرع رسمياً
                         $donationId = \Illuminate\Support\Facades\DB::table('donations')->insertGetId([
                             'amount' => $transaction->amount,
-                            'type' => 'يسر باي',
+                            'type' => 'بطافة مصرفيه',
                             'status' => 1,
-                            'created_at' =>  now()->format('Y-m-d'),
-                            'updated_at' =>  now()->format('Y-m-d'),
+                            'donation_purpose' => $finalPurpose,
+                           'created_at' => now()->format('Y-m-d H:i:s'),
+                            'updated_at' => now()->format('Y-m-d H:i:s'),
                             'date' => now()->format('Y-m-d'),
                         ]);
 
@@ -434,15 +468,20 @@ HTML;
                         if ($userId && $userId !== 'null' && $userId != 0) {
                             \Illuminate\Support\Facades\DB::table('users_donations')->insert([
                                 'user_id' => $userId,
-                                'donation_id' => $donationId
+                                'donation_id' => $donationId,
+                              'created_at' => now()->format('Y-m-d H:i:s'),
+                            'updated_at' => now()->format('Y-m-d H:i:s'),
+
                             ]);
                         }
 
                         // ربط الحملة
-                        if ($campaignId && $campaignId !== 'null' && $campaignId != 0) {
+                        if ($campaignId && $campaignId !== 'null') {
                             \Illuminate\Support\Facades\DB::table('campaigns_donations')->insert([
                                 'campaign_id' => $campaignId,
-                                'donation_id' => $donationId
+                                'donation_id' => $donationId,
+                              'created_at' => now()->format('Y-m-d H:i:s'),
+                            'updated_at' => now()->format('Y-m-d H:i:s'),
                             ]);
                         }
 

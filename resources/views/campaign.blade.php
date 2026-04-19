@@ -146,14 +146,16 @@
                    <i class="las la-pen"></i>
                 </a>
 
-                <a class="modal-effect btn btn-sm btn-danger"
-                   data-effect="effect-scale"
-                   data-id="{{ $x->id }}"
-                   data-name="{{ $x->name }}"
-                   data-toggle="modal"
-                   href="#modaldemo9" title="حذف">
-                   <i class="las la-trash"></i>
-                </a>
+              {{-- 
+<a class="modal-effect btn btn-sm btn-danger"
+   data-effect="effect-scale"
+   data-id="{{ $x->id }}"
+   data-name="{{ $x->name }}"
+   data-toggle="modal"
+   href="#modaldemo9" title="حذف">
+   <i class="las la-trash"></i>
+</a>
+--}}
             </td>
         </tr>
 
