@@ -23,6 +23,63 @@ class DonationController extends Controller
         // إعادة التوجيه مع رسالة نجاح
         return redirect()->back()->with('success', 'تم تحديث حالة الدفع إلى مدفوع.');
     }
+  public function uploadReceipt(Request $request)
+    {
+        // 1. التحقق من صحة البيانات واستقبال user_id تماماً كما في دالة store
+        $request->validate([
+            'donation_id'   => 'required|exists:donations,id',
+            'user_id'       => 'required|exists:users,id', // 👈 إضافة user_id هنا
+            'receipt_image' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120', // 5MB
+        ]);
+
+        // 2. التحقق من أن التبرع يخص المستخدم الحالي عبر جدول الربط (users_donations)
+        $userDonation = user_donation::where('donation_id', $request->donation_id)
+                                     ->where('user_id', $request->user_id)
+                                     ->first();
+
+        if (!$userDonation) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'التبرع غير موجود أو لا يخص هذا المستخدم.',
+            ], 403);
+        }
+
+        // 3. جلب سجل التبرع لتحديثه
+        $donation = Donation::findOrFail($request->donation_id);
+
+        // 4. معالجة وحفظ الملف
+        if ($request->hasFile('receipt_image')) {
+            $file = $request->file('receipt_image');
+            
+            // إنشاء اسم فريد للصورة
+            $filename = 'receipt_' . $donation->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            
+            // الحفظ في التخزين العام (storage/app/public/receipts)
+            $path = $file->storeAs('receipts', $filename, 'public');
+
+            // حذف الصورة القديمة إذا كان المستخدم يقوم بتحديثها
+            if ($donation->transfer_receipt && \Illuminate\Support\Facades\Storage::disk('public')->exists($donation->transfer_receipt)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($donation->transfer_receipt);
+            }
+
+            // 5. تحديث قاعدة البيانات
+            $donation->update([
+                'transfer_receipt' => $path,
+                'status'           => 0, // تغيير الحالة إلى 0 (قيد الانتظار/المراجعة)
+            ]);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'تم رفع إيصال الحوالة بنجاح، بانتظار المراجعة.',
+                'path'    => asset('storage/' . $path) // إرجاع الرابط الكامل للصورة
+            ], 200);
+        }
+
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'لم يتم العثور على ملف مرفق.',
+        ], 400);
+    }
      public function store(Request $request)
     {
         // التحقق من صحة المدخلات
@@ -31,9 +88,11 @@ class DonationController extends Controller
             'campaign_id' => 'nullable|exists:campaigns,id', // ✅ تم التعديل: أصبح nullable
             'amount' => 'required|numeric|min:1',
             'status' => 'nullable|integer',
-            'type' => 'required|string|in:نقدي,ادفع لي,موبي كاش,يسر باي',
+            //'type' => 'required|string|in:نقدي,ادفع لي,موبي كاش,يسر باي,حوالة مصرفية,وان باي',
+            'type' => 'required|string',
             'phone' => 'nullable|string', // ✅ إضافة phone للتحقق إذا كنت تستخدمه في CashPayment
             'donation_purpose' => 'nullable|required_without:campaign_id|string',
+             'transfer_receipt' => 'nullable', 
         ]);
 
         if ($validator->fails()) {
@@ -92,6 +151,7 @@ class DonationController extends Controller
 
             return response()->json([
                 'message' => 'تم تسجيل التبرع بنجاح.',
+                 'donation_id' => $donation["id"],
                 'donation' => $donation,
                 'user_donation' => $userDonation,
                 'purpose' => $purpose, // إرجاع الغرض للتأكيد
@@ -103,9 +163,9 @@ class DonationController extends Controller
             return response()->json(['error' => 'فشل تسجيل التبرع: ' . $e->getMessage()], 500);
         }
     }
-    public function getUserDonations($userId)
+   public function getUserDonations($userId)
 {
-    $donations = DB::table('donations')
+    $donations = DB::table('donations')->whereNull('donations.deleted_at')
         ->leftJoin('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
         ->leftJoin('campaigns', 'campaigns_donations.campaign_id', '=', 'campaigns.id')
         ->leftJoin('users_donations', 'donations.id', '=', 'users_donations.donation_id')
@@ -116,12 +176,20 @@ class DonationController extends Controller
             'campaigns.name as campaign_name'
         )
         ->where('users.id', $userId)
-        ->orderBy('donations.created_at', 'desc') // ترتيب تنازلي حسب التاريخ // تصفية حسب المستخدم
+        ->orderBy('donations.created_at', 'desc') // ترتيب تنازلي حسب التاريخ
         ->get();
+
+    // 🌟 الحل الجذري هنا: إجبار الـ Backend على تحويل القيم إلى أرقام حقيقية
+    $formattedDonations = $donations->map(function ($donation) {
+        $donation->id = (int) $donation->id;          // تحويل الـ id إلى رقم صحيح
+        $donation->status = (int) $donation->status;  // تحويل الـ status إلى رقم صحيح
+        $donation->amount = (float) $donation->amount;// تحويل المبلغ إلى رقم عشري (مهم جداً)
+        return $donation;
+    });
 
     return response()->json([
         'success' => true,
-        'data' => $donations
+        'data' => $formattedDonations
     ]);
 }
         }

@@ -29,7 +29,7 @@ class StoreCampaignRequest extends FormRequest
              'total' => 'nullable|numeric', // السماح بأن تكون فارغة
              'paid_up' => 'required|numeric',
              'recipient' => 'required|regex:/^[\p{Arabic}\p{Latin} ]+$/u',
-             'state_campaign' => 'required|regex:/^[\p{Arabic}\p{Latin} ]+$/u',
+             'state_campaign' => 'nullable|regex:/^[\p{Arabic}\p{Latin} ]+$/u',
          ];
      }
 

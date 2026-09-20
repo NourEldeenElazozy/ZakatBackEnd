@@ -17,6 +17,8 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\RechargeCardController;
+use App\Http\Controllers\AchievementController;
+use App\Http\Controllers\ChatController;
 Route::get('/privace', function () {
     return view('privacy-policy');
 });
@@ -48,11 +50,14 @@ Route::get('/', function () {
 });
 
 Auth::routes(['register' => false]);
-
+ Route::resource('achievements', AchievementController::class)
+        ->except(['show']);
 Route::resource('zakat_nisab', ZakatNisabController::class);
 Route::resource( 'categories' ,CategoriesController::class);
+Route::get('achievements/all', [AchievementController::class, 'index']);
 
 Route::resource( 'campaign' ,CampaignController::class);
+Route::patch('/campaigns/{id}/toggle-active', [CampaignController::class, 'toggleActive'])->name('campaigns.toggleActive');
 
 Route::resource( 'donation' ,DonationsController::class);
 Route::patch('/donations/{id}/mark-as-pending', [DonationsController::class, 'markAsPending'])->name('donations.markAsPending');
@@ -78,10 +83,22 @@ Route::middleware('auth')->group(function () {
 
 
 
+    Route::resource('bank_accounts', App\Http\Controllers\BankAccountController::class)->except(['create', 'show', 'edit']);
 Route::get('/notifications/create', [NotificationController::class, 'create'])->name('notifications.create');
 Route::post('/notifications/send', [NotificationController::class, 'sendNotification'])->name('notifications.send');
+Route::post('/notifications/send-multiple', [NotificationController::class, 'sendToMultiple'])->name('notifications.sendMultiple');
+Route::get('/notifications/search-users', [NotificationController::class, 'searchUsers'])->name('notifications.searchUsers');
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
+// Chat System Routes
+Route::prefix('chat')->name('chat.')->middleware('auth')->group(function () {
+    Route::get('/', [ChatController::class, 'index'])->name('index');
+    Route::post('/{conversation}/reply', [ChatController::class, 'reply'])->name('reply');
+    Route::post('/{conversation}/close', [ChatController::class, 'close'])->name('close');
+    Route::post('/{conversation}/reopen', [ChatController::class, 'reopen'])->name('reopen');
+});
+
 Route::get('/{page}', 'App\Http\Controllers\AdminController@index');
+
 
 

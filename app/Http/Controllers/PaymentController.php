@@ -86,7 +86,7 @@ public function doConf(Request $request)
     try {
         // إنشاء اتصال بـ SOAP باستخدام WSDL
 
-        $client = new SoapClient('http://62.240.55.2:6187/BCDUssd/Edfali.asmx?WSDL', ['trace' => 1]);
+        $client = new SoapClient('https://edfali.bcd.ly/api/BCDUssd/NewEdfali.asmx?WSDL', ['trace' => 1]);
 
         // استدعاء الدالة SOAP المطلوبة مع المعاملات
         $response = $client->__soapCall('OnlineConfTrans', [$params]);

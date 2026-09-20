@@ -143,6 +143,30 @@ public function soon(Request $request)
 
     return response()->json($filteredCampaigns);
 }
+
+public function activeCampaigns(Request $request)
+{
+    $categoryId = $request->input('category_id');
+
+    $donationFilter = function ($query) {
+        $query->where('status', 1);
+    };
+
+    $query = campaign::with(['categorie', 'donation' => $donationFilter])
+        ->where('is_active', 1);
+
+    if ($categoryId) {
+        $query->where('categorie_id', $categoryId);
+    }
+
+    $campaigns = $query->get();
+
+    foreach ($campaigns as $campaign) {
+        $campaign->paid_up = $campaign->donation->sum('amount');
+    }
+
+    return response()->json($campaigns);
+}
     /**
      * Store a newly created resource in storage.
      */

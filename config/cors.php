@@ -19,7 +19,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+   'allowed_origins' => [
+    'https://zakat.ly',
+    'https://www.zakat.ly',
+
+],
 
     'allowed_origins_patterns' => [],
 

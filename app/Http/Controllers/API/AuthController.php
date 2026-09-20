@@ -53,12 +53,12 @@ $validator = Validator::make($request->all(), [
     }
 
     // Login an existing user
-    public function login(Request $request)
+   public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'phone' => 'required|string|size:10',
             'password' => 'required|string',
-            
+            'device_token' => 'nullable|string' // 🌟 مهم جداً لاستقبال رمز الإشعارات
         ]);
 
         if ($validator->fails()) {
@@ -67,14 +67,25 @@ $validator = Validator::make($request->all(), [
 
         $user = User::where('phone', $request->phone)->first();
 
+        // التحقق من وجود المستخدم وصحة كلمة المرور
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        //$user->api_token = Str::random(60);
-        $user->save();
+        // تحديث توكن الإشعارات الخاص بالجهاز الجديد
+        if ($request->has('device_token') && $request->device_token !== $user->device_token) {
+            $user->device_token = $request->device_token;
+            $user->save(); 
+        }
 
-        return response()->json(['user' => $user], 200);
+        // إنشاء توكن المصادقة باستخدام Sanctum
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'تم تسجيل الدخول بنجاح',
+            'user' => $user,
+            'token' => $token // 🌟 هذا ما سيحفظه Flutter في SharedPreferences
+        ], 200);
     }
 
     // Logout the user
@@ -122,4 +133,24 @@ public function checkPhoneExists(Request $request)
         return response()->json(['message' => 'رقم الهاتف غير مسجل'], 404);
     }
 }
+
+    public function updateFcmToken(Request $request)
+    {
+        // 1. التحقق من صحة البيانات القادمة
+        $request->validate([
+            'user_id'      => 'required|exists:users,id',
+            'device_token' => 'required|string',
+        ]);
+
+        // 2. جلب المستخدم وتحديث التوكن
+        $user = User::find($request->user_id);
+        $user->device_token = $request->device_token;
+        $user->save();
+
+        // 3. إرجاع استجابة بنجاح العملية
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Token updated successfully'
+        ], 200);
+    }
 }

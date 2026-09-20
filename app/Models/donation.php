@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class donation extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $guarded = [];
 
@@ -19,7 +20,7 @@ class donation extends Model
 
 public function campaigns()
 {
-    return $this->belongsToMany(Campaign::class, 'campaigns_donations', 'donation_id', 'campaign_id');
+    return $this->belongsToMany(campaign::class, 'campaigns_donations', 'donation_id', 'campaign_id');
 }
     
     

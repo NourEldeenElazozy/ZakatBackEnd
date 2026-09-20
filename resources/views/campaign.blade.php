@@ -88,6 +88,7 @@
             <th>المتبقي</th>
             <th>نوع المستفيد</th>
             <th>حالة الحملة</th>
+            <th>حملة بارزة ⭐</th>
             <th>العمليات</th>
         </tr>
     </thead>
@@ -124,6 +125,22 @@
             <td>{{ $x->recipient }}</td>
             <td>{{ $x->state_campaign }}</td>
 
+            <td class="text-center align-middle">
+                <form action="{{ route('campaigns.toggleActive', $x->id) }}" method="POST" class="d-inline">
+                    @csrf
+                    @method('PATCH')
+                    @if($x->is_active)
+                        <button type="submit" class="btn btn-sm btn-warning font-weight-bold text-dark rounded-pill px-3 py-1 shadow-sm border-0" title="انقر لإلغاء التمييز">
+                            <i class="fas fa-star text-white mr-1"></i> بارزة (نشطة)
+                        </button>
+                    @else
+                        <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 text-nowrap" title="انقر لتمييزها كحملة نشطة بارزة">
+                            <i class="far fa-star text-warning mr-1"></i> تمييز كبارزة
+                        </button>
+                    @endif
+                </form>
+            </td>
+
             <td>
                 <a type="button" class="btn btn-sm btn-info"
                    href="{{ url('donations') }}/{{ $x->id }}">
@@ -141,6 +158,8 @@
                    data-paid_up="{{ $x->total_paid }}"
                    data-recipient="{{ $x->recipient }}"
                    data-state_campaign="{{ $x->state_campaign }}"
+                   data-accepts_zakat="{{ $x->accepts_zakat }}"
+                   data-is_active="{{ $x->is_active }}"
                    data-toggle="modal"
                    href="#exampleModal2" title="تعديل">
                    <i class="las la-pen"></i>
@@ -226,16 +245,19 @@
                                                         </div>
 
                                                         <div class="form-group">
-                                                            <label for="exampleInputEmail1">حالة الحمله </label>
-                                                            <input type="text" class="form-control" id="state_campaign" name="state_campaign" value="مستمره" readonly>
-                                                        </div>
-
-
-
+                         <div class="form-group form-check mt-3">
+    <input type="checkbox" class="form-check-input" id="accepts_zakat_add" name="accepts_zakat" value="1">
+    <label class="form-check-label mr-4 font-weight-bold text-success" for="accepts_zakat_add">هذه الحملة تقبل الزكاة</label>
+</div>
+<div class="form-group form-check mt-2">
+    <input type="checkbox" class="form-check-input" id="is_active_add" name="is_active" value="1">
+    <label class="form-check-label mr-4 font-weight-bold text-primary" for="is_active_add">تعيين كحملة نشطة (بارزة في التطبيق والموقع)</label>
+</div>
                                                         <div class="modal-footer">
                                                             <button type="submit" class="btn btn-primary">تاكيد</button>
                                                             <button type="button" class="btn btn-secondary" data-dismiss="modal">اغلاق</button>
                                                         </div>
+                                                        
 
                                                     </form>
                                                 </div>
@@ -246,6 +268,7 @@
                                    
 <!--report donation-->
    
+
 
 
 
@@ -326,6 +349,14 @@
                                                         <label for="recipient-name" class="col-form-label"> الحاله</label>
                                                         <input class="form-control" name="state_campaign" id="state_campaign" type="text">
                                                     </div>
+                                                    <div class="form-group form-check mt-3">
+    <input type="checkbox" class="form-check-input" id="accepts_zakat_edit" name="accepts_zakat" value="1">
+    <label class="form-check-label mr-4 font-weight-bold text-success" for="accepts_zakat_edit">هذه الحملة تقبل الزكاة</label>
+</div>
+<div class="form-group form-check mt-2">
+    <input type="checkbox" class="form-check-input" id="is_active_edit" name="is_active" value="1">
+    <label class="form-check-label mr-4 font-weight-bold text-primary" for="is_active_edit">تعيين كحملة نشطة (بارزة في التطبيق والموقع)</label>
+</div>
                                             </div>
 
                                             <div class="modal-footer">
@@ -419,8 +450,11 @@
         var paid_up = button.data('paid_up')
         var recipient = button.data('recipient')
         var state_campaign = button.data('state_campaign')
+        var accepts_zakat = button.data('accepts_zakat') // 🌟 قراءة قيمة الزكاة
+        var is_active = button.data('is_active') // 🌟 قراءة حالة الحملة النشطة
 
         var modal = $(this)
+       
         modal.find('.modal-body #id').val(id);
         modal.find('.modal-body #name').val(name);
         modal.find('.modal-body #description').val(description);
@@ -431,6 +465,17 @@
         modal.find('.modal-body #recipient').val(recipient);
         modal.find('.modal-body #state_campaign').val(state_campaign);
 
+        if(accepts_zakat == 1 || accepts_zakat == '1' || accepts_zakat == true) {
+            modal.find('#accepts_zakat_edit').prop('checked', true);
+        } else {
+            modal.find('#accepts_zakat_edit').prop('checked', false);
+        }
+
+        if(is_active == 1 || is_active == '1' || is_active == true) {
+            modal.find('#is_active_edit').prop('checked', true);
+        } else {
+            modal.find('#is_active_edit').prop('checked', false);
+        }
     })
 
 </script>

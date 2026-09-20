@@ -73,6 +73,13 @@
                 </ul>
             </li>
             <li class="slide">
+                <a class="side-menu__item" href="{{ url('/bank_accounts') }}">
+                    <i class="fa fa-university side-menu__icon"></i>
+                    <span class="side-menu__label">الحسابات المصرفية</span> 
+                </a>
+            </li>
+
+            <li class="slide">
                 <a class="side-menu__item" href="{{ url('/zakat_nisab') }}">
                     <i class="fa fa-coins side-menu__icon"></i>
                     <span class="side-menu__label">نصاب الزكاة</span> 
@@ -94,7 +101,27 @@
                     <span class="side-menu__label">الإعلانات</span>
                 </a>
             </li>
+   <li class="slide">
+                <a class="side-menu__item" href="{{ url('/' . $page='achievements') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="side-menu__icon" viewBox="0 0 24 24">
+                        <path d="M0 0h24v24H0V0z" fill="none"/>
+                        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-9-4.5l3.5-4.5 2.5 3.22V17H5v-2.5l4-5.33zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" fill="currentColor"/>
+                    </svg>
+                    <span class="side-menu__label">إنجازات صندوق الزكاة</span>
+                </a>
+            </li>
 
+            <li class="slide">
+                <a class="side-menu__item" href="{{ route('chat.index') }}">
+                    <i class="fa fa-comments side-menu__icon"></i>
+                    <span class="side-menu__label">المحادثات
+                        @php $chatUnread = \App\Models\Message::where('sender_type','user')->whereNull('read_at')->count(); @endphp
+                        @if($chatUnread > 0)
+                            <span class="badge badge-danger badge-pill mr-1">{{ $chatUnread }}</span>
+                        @endif
+                    </span>
+                </a>
+            </li>
         </ul>
     </div>
 </aside>

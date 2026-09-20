@@ -12,198 +12,221 @@ use App\Models\EzonpayYusser; // ✅ تأكد من استدعاء الموديل
 
 class OnlinePaymentController extends Controller
 {
- public function signin(Request $request)
-{
-    $data = [
-        'userId' => 142558,
-        'pin' => 'U3f@Zh',
-        'providerId' => 3636,
-        'authUserType' => 0,
-    ];
+    public function signin(Request $request)
+    {
+        $data = [
+            'userId' => 142558,
+            'pin' => 'U3f@Zh',
+            'providerId' => 3636,
+            'authUserType' => 0,
+        ];
 
-    $signinResponse = Http::post('http://160.19.103.122:8888/OnlinePayment.3.0.1/api/OnlinePaymentServices/Signin', $data);
+        $signinResponse = Http::post('http://160.19.103.122:8888/OnlinePayment.3.0.1/api/OnlinePaymentServices/Signin', $data);
 
-    return response()->json($signinResponse->json(), $signinResponse->status());
-}
-public function createEzoneLink(Request $request)
-{
-    // 1. التحقق من المدخلات 
-    $request->validate([
-        'amount' => 'required|numeric|min:1',
-        'order_ref' => 'required|string',
-        'title' => 'nullable|string',
-        'user_id' => 'nullable|integer',
-        'campaign_id' => 'nullable|integer',
-        'purpose' => 'nullable|string',
-    ]);
-
-    $orderRef = $request->input('order_ref');
-    $amount = (float)$request->input('amount');
-    $userId = $request->input('user_id');
-    $campaignId = $request->input('campaign_id');
-$purpose = $request->input('purpose');
-$paymentMethodType = $request->input('payment_method', 'yosrpay');
-// 🌟 2. معالجة اسم العميل وتقسيمه ليطابق شروط البوابة
-    $fullName = trim($request->input('customer_name', 'فاعل خير'));
-    $nameParts = explode(' ', $fullName, 2); // فصل الاسم من أول مسافة
-    $firstName = $nameParts[0];
-    // إذا لم يكتب المستخدم اسم أخير، نمرر نقطة أو "غير محدد" لتجنب خطأ الحقول الفارغة
-    $lastName = $nameParts[1] ?? '.'; 
-    
-    $phoneNumber = $request->input('customer_phone', '');
-    $excludedMethods = [];
-    if ($paymentMethodType === 'moamalat') {
-        // إذا اختار معاملات: نستثني الجميع ما عدا 101 (بطاقة مصرفية)
-        $excludedMethods = [125, 107, 106, 105, 104, 102];
-    } else {
-        // إذا اختار يسر باي: نستثني الجميع ما عدا 105 (يسر باي)
-        $excludedMethods = [125, 107, 106, 104, 102, 101];
+        return response()->json($signinResponse->json(), $signinResponse->status());
     }
-    // 2. حفظ العملية مبدئياً
-    $transaction = EzonpayYusser::create([
-        'order_ref' => $orderRef,
-        'amount' => $amount,
-        'status' => 'pending', 
-    ]);
 
-    $url = "https://api.ezonepay.ly/payment-link/new";
-    $expiresAt = now()->addHour()->format('Y-m-d H:i');
+    public function createEzoneLink(Request $request)
+    {
+        // 1. التحقق من المدخلات 
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'order_ref' => 'required|string',
+            'title' => 'nullable|string',
+            'user_id' => 'nullable|integer',
+            'campaign_id' => 'nullable|integer',
+            'purpose' => 'nullable|string',
+        ]);
 
-    $redirectUrl = url('/api/ezone/payment-callback?order_ref=' . $orderRef . '&user_id=' . $userId . '&campaign_id=' . $campaignId . '&purpose=' . urlencode($purpose));
-    
-   $payload = [
-        "Title" => $request->input('title', "تبرع"),
-        "OrderReference" => $orderRef,
-        "ShopId" => 1025, 
-        "Amount" => $amount,
-        "Note" => "Payment for order " . $orderRef,
-        "IsEnabled" => true,
-        "ExpiresAt" => $expiresAt, 
-        "MaxUsageCount" => 2, 
-     "ExcludedPaymentMethods" => $excludedMethods, // 🌟 تمرير المصفوفة الديناميكية هنا
-        "RedirectUrl" => $redirectUrl ,
-        "customer" => [
-            "firstName" => $firstName,
-            "lastName" => $lastName,
-            "phoneNumber" => $phoneNumber
-        ]
-    ];
+        $orderRef = $request->input('order_ref');
+        $amount = (float)$request->input('amount');
+        $userId = $request->input('user_id');
+        $campaignId = $request->input('campaign_id');
+        $purpose = $request->input('purpose');
+        $paymentMethodType = $request->input('payment_method', 'yosrpay');
 
-    try {
-        $token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJlem9uZS1wYXktdXNlcnMiLCJpc3MiOiJlem9uZS1wYXktYXBpIiwiZXhwIjoxNzg1MTQ1OTExLCJpYXQiOjE3Njk1OTM5MTEsInN1YiI6IjIwIiwicm9sZSI6IjIiLCJqdGkiOiIwNjk3OWRjMy03MWIzLTc1OTItODAwMC1jYTYzNWZkYWFmZmQiLCJtaWQiOjE3LCJtdHlwZSI6MX0.0LyBWvzo2dXJWy13vxpu0DsX7o_3ZDxEHLJE85G3kU8';
-
-        $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json',
-        ])->post($url, $payload);
-
-        $responseData = $response->json(); 
-
-        if ($response->successful()) {
-            
-            // 🚨 التعديل الهام جداً هنا 🚨
-            // يجب أن تظل الحالة pending (أو نضعها created) لأن العميل لم يدفع بعد!
-            $transaction->update([
-                'status' => 'pending', // تم التعديل من success إلى pending
-                'payment_link' => $responseData['link'] ?? null,
-                'response_data' => $responseData, 
-            ]);
-
-            return response()->json([
-                'status' => 'success',
-                'link' => $responseData['link'] ?? null,
-            ], 200);
-            
-        } else {
-            $transaction->update(['status' => 'failed', 'response_data' => $responseData]);
-            return response()->json(['status' => 'error', 'message' => 'فشل الإنشاء'], $response->status());
+        // 🌟 التعديل الأول: تحديد الاسم العربي بناءً على ما يرسله التطبيق
+        $arabicPaymentMethod = 'يسر باي'; // الافتراضي
+        if ($paymentMethodType === 'moamalat') {
+            $arabicPaymentMethod = 'بطاقة مصرفية';
+        } else if ($paymentMethodType === 'onepay') {
+            $arabicPaymentMethod = 'وان باي';
         }
 
-    } catch (\Exception $e) {
-        $transaction->update(['status' => 'error', 'response_data' => ['error_msg' => $e->getMessage()]]);
-        return response()->json(['status' => 'error', 'message' => 'خطأ اتصال'], 500);
+        // 2. معالجة اسم العميل وتقسيمه ليطابق شروط البوابة
+        $fullName = trim($request->input('customer_name', 'فاعل خير'));
+        $nameParts = explode(' ', $fullName, 2); // فصل الاسم من أول مسافة
+        $firstName = $nameParts[0];
+        // إذا لم يكتب المستخدم اسم أخير، نمرر نقطة أو "غير محدد" لتجنب خطأ الحقول الفارغة
+        $lastName = $nameParts[1] ?? '.'; 
+        
+        $phoneNumber = $request->input('customer_phone', '');
+        $excludedMethods = [];
+        
+        if ($paymentMethodType === 'moamalat') {
+            // إذا اختار معاملات: نستثني الجميع ما عدا 101 (بطاقة مصرفية)
+            $excludedMethods = [125, 107, 106, 105, 104, 102, 103, 108];
+
+        } else if ($paymentMethodType === 'onepay') {
+            // 🌟 حالة OnePay الجديدة
+            // ملاحظة: قمت بتنظيف المصفوفة من الرقم المتكرر 101
+            $excludedMethods = [125, 107, 106, 104, 102, 101, 108, 105]; 
+
+        } else if ($paymentMethodType === 'yosrpay') { 
+            // الحالة الافتراضية (مثلاً يسر باي): نستثني الجميع ما عدا 105
+            $excludedMethods = [125, 107, 106, 104, 102, 101, 103, 108];
+        }
+        
+        // 2. حفظ العملية مبدئياً
+        $transaction = EzonpayYusser::create([
+            'order_ref' => $orderRef,
+            'amount' => $amount,
+            'status' => 'pending', 
+        ]);
+
+        $url = "https://api.ezonepay.ly/payment-link/new";
+        $expiresAt = now()->addHour()->format('Y-m-d H:i');
+
+        // 🌟 التعديل الثاني (مهم جداً): تمرير $arabicPaymentMethod للرابط
+        $redirectUrl = url('/api/ezone/payment-callback?order_ref=' . $orderRef . '&user_id=' . $userId . '&campaign_id=' . $campaignId . '&purpose=' . urlencode($purpose ?? '') . '&method=' . urlencode($arabicPaymentMethod));
+        
+        $payload = [
+            "Title" => $request->input('title', "تبرع"),
+            "OrderReference" => $orderRef,
+            "ShopId" => 1025, 
+            "Amount" => $amount,
+            "Note" => "Payment for order " . $orderRef,
+            "IsEnabled" => true,
+            "ExpiresAt" => $expiresAt, 
+            "MaxUsageCount" => 2, 
+            "ExcludedPaymentMethods" => $excludedMethods, // 🌟 تمرير المصفوفة الديناميكية هنا
+            "RedirectUrl" => $redirectUrl ,
+            "customer" => [
+                "firstName" => $firstName,
+                "lastName" => $lastName,
+                "phoneNumber" => $phoneNumber
+            ]
+        ];
+
+        try {
+            $apiKey = env('EZONE_API_KEY', 'epk_6sV-Zwtw.sEwAM6BgArk6Wy_wz89ew7yYX1LpGPLg-Cp9bYgZ7f0');
+            $token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJlem9uZS1wYXktdXNlcnMiLCJpc3MiOiJlem9uZS1wYXktYXBpIiwiZXhwIjoxNzg1MTQ1OTExLCJpYXQiOjE3Njk1OTM5MTEsInN1YiI6IjIwIiwicm9sZSI6IjIiLCJqdGkiOiIwNjk3OWRjMy03MWIzLTc1OTItODAwMC1jYTYzNWZkYWFmZmQiLCJtaWQiOjE3LCJtdHlwZSI6MX0.0LyBWvzo2dXJWy13vxpu0DsX7o_3ZDxEHLJE85G3kU8';
+
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+              'X-API-Key' => $apiKey, // 🌟 تغيير اسم الترويسة وتمرير المفتاح
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->post($url, $payload);
+
+            $responseData = $response->json(); 
+
+            if ($response->successful()) {
+                
+                // 🚨 التعديل الهام جداً هنا 🚨
+                // يجب أن تظل الحالة pending (أو نضعها created) لأن العميل لم يدفع بعد!
+                $transaction->update([
+                    'status' => 'pending', // تم التعديل من success إلى pending
+                    'payment_link' => $responseData['link'] ?? null,
+                    'response_data' => $responseData, 
+                ]);
+
+                return response()->json([
+                    'status' => 'success',
+                    'link' => $responseData['link'] ?? null,
+                ], 200);
+                
+            } else {
+                $transaction->update(['status' => 'failed', 'response_data' => $responseData]);
+                return response()->json(['status' => 'error', 'message' => 'فشل الإنشاء'], $response->status());
+            }
+
+        } catch (\Exception $e) {
+            $transaction->update(['status' => 'error', 'response_data' => ['error_msg' => $e->getMessage()]]);
+            return response()->json(['status' => 'error', 'message' => 'خطأ اتصال'], 500);
+        }
     }
-}
-public function openSession(Request $request)
-{
-    // الخطوة 1: بيانات تسجيل الدخول
-    $signinData = [
-        'userId' => 142558,
-        'pin' => 'U3f@Zh',
-        'providerId' => 3636,
-        'authUserType' => 0,
-    ];
 
-    // إرسال طلب تسجيل الدخول
-    $signinResponse = Http::post(
-        'http://160.19.103.122:8888/OnlinePayment.3.0.1/api/OnlinePaymentServices/Signin',
-        $signinData
-    );
-
-    if (!$signinResponse->ok()) {
-        return response()->json(['error' => 'فشل تسجيل الدخول إلى بوابة الدفع'], $signinResponse->status());
-    }
-
-    $signinJson = $signinResponse->json();
-    $token = $signinJson['content']['value'] ?? null;
-    $transactionId = $signinJson['traceId'] ?? null;
-   
-    if (!$token || $transactionId === null) {
-        return response()->json(['error' => 'البيانات الراجعة من Signin غير مكتملة'], 500);
-    }
-    
-    // الخطوة 2: إعداد بيانات فتح الجلسة
-    $openSessionData = [
-        'amount' => $request->input('amount', 0),
-        'identityCard' => "223125010",
-        'transactionId' => $transactionId,
-        'onlineOperation' => $request->input('onlineOperation', 1),
-    ];
-   
-
-    // إرسال طلب فتح الجلسة
-    $openSessionResponse = Http::withHeaders([
-        'Authorization' => "Bearer {$token}",
-        'Content-Type' => 'application/json',
-    ])->post(
-        'http://160.19.103.122:8888/OnlinePayment.3.0.1/api/OnlinePaymentServices/OpenSession',
-        $openSessionData
-    );
-
-    return response()->json($openSessionResponse->json(), $openSessionResponse->status());
-}
-public function completeSession(Request $request)
-{
-    $otp = $request->input('otp');
-    $token = $request->input('token'); // استقبال التوكن
-
-    if (!$otp || !$token) {
-        return response()->json(['error' => 'OTP والتوكن مطلوبان'], 400);
-    }
-
-    $data = [
-        'otp' => $otp,
-    ];
-
-    // إرسال الطلب باستخدام التوكن
-    $response = Http::withHeaders([
-        'Authorization' => "Bearer {$token}",
-        'Content-Type' => 'application/json',
-    ])->post(
-        'http://160.19.103.122:8888/OnlinePayment.3.0.1/api/OnlinePaymentServices/CompleteSession?culture=ar-LY',
-        $data
-    );
-
-
-    return response()->json([
-        'status' => $response->status(),
-        'response' => $response->json()
-    ], $response->status());
-}
- public function mobiCash(Request $request)
+    public function openSession(Request $request)
     {
-         $request->validate([
+        // الخطوة 1: بيانات تسجيل الدخول
+        $signinData = [
+            'userId' => 142558,
+            'pin' => 'U3f@Zh',
+            'providerId' => 3636,
+            'authUserType' => 0,
+        ];
+
+        // إرسال طلب تسجيل الدخول
+        $signinResponse = Http::post(
+            'http://160.19.103.122:8888/OnlinePayment.3.0.1/api/OnlinePaymentServices/Signin',
+            $signinData
+        );
+
+        if (!$signinResponse->ok()) {
+            return response()->json(['error' => 'فشل تسجيل الدخول إلى بوابة الدفع'], $signinResponse->status());
+        }
+
+        $signinJson = $signinResponse->json();
+        $token = $signinJson['content']['value'] ?? null;
+        $transactionId = $signinJson['traceId'] ?? null;
+       
+        if (!$token || $transactionId === null) {
+            return response()->json(['error' => 'البيانات الراجعة من Signin غير مكتملة'], 500);
+        }
+        
+        // الخطوة 2: إعداد بيانات فتح الجلسة
+        $openSessionData = [
+            'amount' => $request->input('amount', 0),
+            'identityCard' => "223125010",
+            'transactionId' => $transactionId,
+            'onlineOperation' => $request->input('onlineOperation', 1),
+        ];
+       
+
+        // إرسال طلب فتح الجلسة
+        $openSessionResponse = Http::withHeaders([
+            'Authorization' => "Bearer {$token}",
+            'Content-Type' => 'application/json',
+        ])->post(
+            'http://160.19.103.122:8888/OnlinePayment.3.0.1/api/OnlinePaymentServices/OpenSession',
+            $openSessionData
+        );
+
+        return response()->json($openSessionResponse->json(), $openSessionResponse->status());
+    }
+
+    public function completeSession(Request $request)
+    {
+        $otp = $request->input('otp');
+        $token = $request->input('token'); // استقبال التوكن
+
+        if (!$otp || !$token) {
+            return response()->json(['error' => 'OTP والتوكن مطلوبان'], 400);
+        }
+
+        $data = [
+            'otp' => $otp,
+        ];
+
+        // إرسال الطلب باستخدام التوكن
+        $response = Http::withHeaders([
+            'Authorization' => "Bearer {$token}",
+            'Content-Type' => 'application/json',
+        ])->post(
+            'http://160.19.103.122:8888/OnlinePayment.3.0.1/api/OnlinePaymentServices/CompleteSession?culture=ar-LY',
+            $data
+        );
+
+
+        return response()->json([
+            'status' => $response->status(),
+            'response' => $response->json()
+        ], $response->status());
+    }
+
+    public function mobiCash(Request $request)
+    {
+        $request->validate([
             'card_number' => 'required|string',
             'amount' => 'required|numeric|min:0.1',
         ]);
@@ -267,8 +290,9 @@ public function completeSession(Request $request)
             ], 500);
         }
     }
+
     public function verifymobiCash(Request $request)
- {
+    {
         $request->validate([
             'payment_uuid' => 'required|string',
             'otp' => 'required|string',
@@ -303,17 +327,17 @@ public function completeSession(Request $request)
                 ]);
             } else {
                 // إذا لم يتم إنشاء العملية سابقًا، نحفظها هنا أيضًا
-                 mobipayments::create([
-        'payment_uuid' => $request->payment_uuid,
-        'status' => $response->successful()
-            ? ($responseData['data']['status'] ?? 'SUCCESS')
-            : 'FAILED',
-        'amount' => $response->successful() ? $responseData['data']['amount'] : 0,
-        'response_data' => json_encode($responseData),
-        'description' => $response->successful()
-            ? ($responseData['data']['description'] ?? 'تحقق من رمز OTP')
-            : 'تحقق من رمز OTP',
-    ]);
+                mobipayments::create([
+                    'payment_uuid' => $request->payment_uuid,
+                    'status' => $response->successful()
+                        ? ($responseData['data']['status'] ?? 'SUCCESS')
+                        : 'FAILED',
+                    'amount' => $response->successful() ? $responseData['data']['amount'] : 0,
+                    'response_data' => json_encode($responseData),
+                    'description' => $response->successful()
+                        ? ($responseData['data']['description'] ?? 'تحقق من رمز OTP')
+                        : 'تحقق من رمز OTP',
+                ]);
             }
 
             if ($response->successful()) {
@@ -346,7 +370,8 @@ public function completeSession(Request $request)
             ], 500);
         }
     }
-public function paymentCallback(Request $request)
+
+    public function paymentCallback(Request $request)
     {
         // دالة داخلية لتوليد تصميم HTML احترافي وموحد لجميع الحالات
         $generateHtml = function ($title, $message, $type = 'success') {
@@ -406,7 +431,11 @@ HTML;
         $orderRef = $request->query('order_ref');
         $userId = $request->query('user_id');
         $campaignId = $request->query('campaign_id');
-$purpose = $request->query('purpose'); // 🌟 استقبال الغرض
+        $purpose = $request->query('purpose'); // 🌟 استقبال الغرض
+        
+        // 🌟 التعديل الثالث (مهم جداً): استقبال وسيلة الدفع التي مررناها في الرابط
+        $paymentMethodType = $request->query('method', 'يسر باي');
+        
         if (!$orderRef) {
             return response($generateHtml("رقم الطلب مفقود!", "لا يمكن معالجة هذه العملية بسبب نقص في البيانات.", "error"), 400);
         }
@@ -428,10 +457,10 @@ $purpose = $request->query('purpose'); // 🌟 استقبال الغرض
 
         $url = "https://api.ezonepay.ly/payment-link/" . $linkId;
         $token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJlem9uZS1wYXktdXNlcnMiLCJpc3MiOiJlem9uZS1wYXktYXBpIiwiZXhwIjoxNzg1MTQ1OTExLCJpYXQiOjE3Njk1OTM5MTEsInN1YiI6IjIwIiwicm9sZSI6IjIiLCJqdGkiOiIwNjk3OWRjMy03MWIzLTc1OTItODAwMC1jYTYzNWZkYWFmZmQiLCJtaWQiOjE3LCJtdHlwZSI6MX0.0LyBWvzo2dXJWy13vxpu0DsX7o_3ZDxEHLJE85G3kU8';
-
+       $apiKey = env('EZONE_API_KEY', 'epk_6sV-Zwtw.sEwAM6BgArk6Wy_wz89ew7yYX1LpGPLg-Cp9bYgZ7f0');
         try {
             $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => 'Bearer ' . $token,
+             'X-API-Key' => $apiKey,
                 'Accept' => 'application/json',
             ])->get($url);
 
@@ -456,7 +485,10 @@ $purpose = $request->query('purpose'); // 🌟 استقبال الغرض
                         // ✅ 2. تسجيل التبرع رسمياً
                         $donationId = \Illuminate\Support\Facades\DB::table('donations')->insertGetId([
                             'amount' => $transaction->amount,
-                            'type' => 'بطافة مصرفيه',
+                            
+                            // 🌟 التعديل الرابع: حفظ المتغير الديناميكي هنا
+                            'type' => $paymentMethodType, 
+                            
                             'status' => 1,
                             'donation_purpose' => $finalPurpose,
                            'created_at' => now()->format('Y-m-d H:i:s'),
@@ -514,4 +546,3 @@ $purpose = $request->query('purpose'); // 🌟 استقبال الغرض
         }
     }
 }
-

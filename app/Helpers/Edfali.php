@@ -7,7 +7,8 @@ use SoapClient;
 
 class Edfali {
 
-    protected $wsdl = 'http://62.240.55.2:6187/BCDUssd/Edfali.asmx?WSDL';
+   // protected $wsdl = 'http://62.240.55.2:6187/BCDUssd/Edfali.asmx?WSDL';
+protected $wsdl = 'https://edfali.bcd.ly/api/BCDUssd/NewEdfali.asmx?WSDL';
 
     // دالة لتحويل المعاملات
     public function doPTrans( $customerMobile, $amount) {
@@ -17,7 +18,7 @@ class Edfali {
         // تحضير المعاملات
         $params = [
             'Mobile' => "942602030",
-            'Pin' =>"8494",
+            'Pin' =>"1234",
             'Cmobile' => $formattedCustomerMobile,
             'Amount' => $amount,
             'PW' => env('DEFAULT_PW', '123@xdsr$#!!')  // من الأفضل تخزين كلمة المرور في البيئة
@@ -29,6 +30,8 @@ class Edfali {
 
             // استدعاء الدالة SOAP المطلوبة مع المعاملات
             $response = $client->__soapCall('DoPTrans', [$params]);
+            // أضف هذا السطر لرؤية ما يعود من الخادم في سجلات Laravel (storage/logs/laravel.log)
+\Log::info('SOAP Response:', (array)$response);
 
             // معالجة الاستجابة
             if (isset($response->DoPTransResult)) {

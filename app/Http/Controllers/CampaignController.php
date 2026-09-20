@@ -54,7 +54,7 @@ public function index()
    public function index2($id)
 {
     // 1. جلب قائمة التبرعات
-    $donations = DB::table('donations')
+    $donations = DB::table('donations')->whereNull('donations.deleted_at')
         ->join('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
         ->join('campaigns', 'campaigns_donations.campaign_id', '=', 'campaigns.id')
         ->join('users_donations', 'donations.id', '=', 'users_donations.donation_id')
@@ -65,7 +65,7 @@ public function index()
         ->get();
 
     // 2. حساب إجمالي النقدية "المكتملة" (Status = 1)
-    $total_cash_completed = DB::table('donations')
+    $total_cash_completed = DB::table('donations')->whereNull('donations.deleted_at')
         ->join('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
         ->where('campaigns_donations.campaign_id', $id)
         ->where('donations.type', 'نقدي')
@@ -73,7 +73,7 @@ public function index()
         ->sum('donations.amount');
 
     // 3. حساب إجمالي النقدية "غير المكتملة" (Status = 0)
-    $total_cash_pending = DB::table('donations')
+    $total_cash_pending = DB::table('donations')->whereNull('donations.deleted_at')
         ->join('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
         ->where('campaigns_donations.campaign_id', $id)
         ->where('donations.type', 'نقدي')
@@ -81,7 +81,7 @@ public function index()
         ->sum('donations.amount');
 
     // 4. حساب إجمالي باقي القيم (المدفوعات غير النقدية - إلكتروني/شيك/إلخ)
-    $total_other_donations = DB::table('donations')
+    $total_other_donations = DB::table('donations')->whereNull('donations.deleted_at')
         ->join('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
         ->where('campaigns_donations.campaign_id', $id)
         ->where('donations.type', '!=', 'نقدي')
@@ -95,22 +95,44 @@ public function index()
 
     public function store(StoreCampaignRequest $request)
     {
-
-
         $input = $request->all();
 
         // تحقق مما إذا كان total فارغًا
         if (empty($input['total'])) {
             $input['total'] = 0; // تعيين القيمة إلى 0
         }
-    
+        $input['accepts_zakat'] = $request->has('accepts_zakat') ? 1 : 0;
+        $input['is_active'] = $request->has('is_active') ? 1 : 0;
+        if (empty($input['state_campaign'])) {
+            $input['state_campaign'] = 'مستمره';
+        }
+
         if ($image = $request->File('image')) {
-
-
             $destinationPath = 'public/img/';
             $profileimage = date('YmdHis') . "." . $image->getClientOriginalExtension();
             $image->move($destinationPath, $profileimage);
             $input['image'] = "$profileimage";
+
+            // ======== مرحلة توليد المصغرة (Thumbnail) المعزولة ========
+            try {
+                $thumbnailDir = public_path($destinationPath . 'thumbnails');
+                if (!\Illuminate\Support\Facades\File::exists($thumbnailDir)) {
+                    \Illuminate\Support\Facades\File::makeDirectory($thumbnailDir, 0755, true);
+                }
+
+                $originalFullPath = public_path($destinationPath . $profileimage);
+                $filenameWithoutExt = pathinfo($profileimage, PATHINFO_FILENAME);
+                $thumbnailPath = $thumbnailDir . '/' . $filenameWithoutExt . '.webp';
+
+                $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
+                $img = $manager->read($originalFullPath);
+                $img->scale(width: 600);
+                $img->toWebp(80)->save($thumbnailPath);
+
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to generate thumbnail for campaign: ' . $e->getMessage());
+            }
+            // =========================================================
         }
 
         campaign::create($input);
@@ -119,24 +141,17 @@ public function index()
         return redirect('/campaign');
     }
 
-
-
     public function show($id)
     {
     }
-
-
 
     public function edit(campaign $campaigns)
     {
         //
     }
 
-
     public function update(UpdateCampaignRequest $request, campaign $campaigns)
     {
-
-
         $id = categorie::where('name_category', $request->name_category)->first()->id;
 
         $input = campaign::findOrFail($request->id);
@@ -149,21 +164,38 @@ public function index()
         $input->paid_up = $request->paid_up;
         $input->recipient = $request->recipient;
         $input->state_campaign = $request->state_campaign;
-
-
-
+        $input->accepts_zakat = $request->has('accepts_zakat') ? 1 : 0;
+        $input->is_active = $request->has('is_active') ? 1 : 0;
 
         if ($image = $request->File('image')) {
-
-
             $destinationPath = 'public/img/';
             $profileimage = date('YmdHis') . "." . $image->getClientOriginalExtension();
             $image->move($destinationPath, $profileimage);
             $input['image'] = "$profileimage";
+
+            // ======== مرحلة توليد المصغرة (Thumbnail) المعزولة ========
+            try {
+                $thumbnailDir = public_path($destinationPath . 'thumbnails');
+                if (!\Illuminate\Support\Facades\File::exists($thumbnailDir)) {
+                    \Illuminate\Support\Facades\File::makeDirectory($thumbnailDir, 0755, true);
+                }
+
+                $originalFullPath = public_path($destinationPath . $profileimage);
+                $filenameWithoutExt = pathinfo($profileimage, PATHINFO_FILENAME);
+                $thumbnailPath = $thumbnailDir . '/' . $filenameWithoutExt . '.webp';
+
+                $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
+                $img = $manager->read($originalFullPath);
+                $img->scale(width: 600);
+                $img->toWebp(80)->save($thumbnailPath);
+
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to generate thumbnail for campaign: ' . $e->getMessage());
+            }
+            // =========================================================
         } else {
             unset($input['image']);
         }
-
 
         $input->save();
 
@@ -171,10 +203,22 @@ public function index()
         return redirect('/campaign');
     }
 
+    public function toggleActive($id)
+    {
+        $campaign = campaign::findOrFail($id);
+        $campaign->is_active = $campaign->is_active ? 0 : 1;
+        $campaign->save();
+
+        $message = $campaign->is_active 
+            ? 'تم إضافة الحملة إلى قسم الحملات النشطة/البارزة بنجاح.' 
+            : 'تم إزالة الحملة من قسم الحملات النشطة.';
+
+        session()->flash('edit', $message);
+        return redirect()->back();
+    }
 
     public function destroy(Request $request, campaign $campaigns)
     {
-
         campaign::findOrFail($request->id)->delete();
 
         $campaigns->delete();

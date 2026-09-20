@@ -104,7 +104,7 @@ $total_collected = donation::where('status', 1)->sum('amount');
         $campaigns_list = \App\Models\campaign::select('id', 'name')->get();
         
         // 🌟 جلب أوجه التبرع الفريدة (تجاهل القيمة 'campaign' لأنها تعني أنه مرتبط بحملة مخصصة)
-        $purposes_list = DB::table('donations')
+        $purposes_list = DB::table('donations')->whereNull('donations.deleted_at')
             ->whereNotNull('donation_purpose')
             ->where('donation_purpose', '!=', 'campaign')
             ->select('donation_purpose')
@@ -115,10 +115,10 @@ $total_collected = donation::where('status', 1)->sum('amount');
         $donors_list = \App\Models\User::whereHas('donation')->select('id', 'name')->get();
         
         // أنواع الدفع المتاحة في النظام
-        $payment_types = DB::table('donations')->select('type')->distinct()->pluck('type');
+        $payment_types = DB::table('donations')->whereNull('donations.deleted_at')->select('type')->distinct()->pluck('type');
 
         // 2. بناء الاستعلام الأساسي
-        $query = DB::table('donations')
+        $query = DB::table('donations')->whereNull('donations.deleted_at')
             ->leftJoin('campaigns_donations', 'donations.id', '=', 'campaigns_donations.donation_id')
             ->leftJoin('campaigns', 'campaigns_donations.campaign_id', '=', 'campaigns.id')
             ->leftJoin('users_donations', 'donations.id', '=', 'users_donations.donation_id')
